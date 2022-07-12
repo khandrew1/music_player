@@ -6,9 +6,20 @@ from rich.syntax import Syntax
 from rich.console import RenderableType
 from rich.panel import Panel
 
+import vlc
+
 class MusicPlayer(App):
+
+    global player
+
+    player = vlc.MediaPlayer()
+
     async def on_load(self, event):
-        await self.bind("q", "quit") # quit keybind
+        await self.bind("q", "quit", "Quit") # quit keybind
+        await self.bind("p", "pause()", "Pause")
+
+    def action_pause(self):
+        player.pause()
 
     async def on_mount(self) -> None:
         # Creating Widgets
@@ -16,7 +27,7 @@ class MusicPlayer(App):
         self.directory = DirectoryTree("/home/andrxw/Downloads", "Music") # Actually shows the directory
         
         await self.view.dock(Header(), edge="top")
-        # await self.view.dock(Footer(), edge="bottom")
+        await self.view.dock(Footer(), edge="bottom")
 
         await self.view.dock(ScrollView(self.directory), edge="left", size=48, name="Sidebar") # docks the directory and allows it to scroll
 
@@ -27,8 +38,15 @@ class MusicPlayer(App):
         
         music_file: RenderableType
 
-        music_file = message.path 
+        music_file = message.path
 
         await self.body.update(music_file)
+        
+        player.set_mrl(music_file)
+
+        if player.is_playing():
+            player.pause()
+        else:
+            player.play()
 
 MusicPlayer.run(log="textual.log")
