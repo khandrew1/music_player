@@ -16,9 +16,10 @@ class MusicPlayer(App):
 
     async def on_load(self, event):
         await self.bind("q", "quit", "Quit") # quit keybind
-        await self.bind("p", "pause()", "Pause")
-
-    def action_pause(self):
+        await self.bind("p", "pause_play()", "Pause/Play") # pause/play keybind
+    
+    # Action handler to pause music
+    def action_pause_play(self):
         player.pause()
 
     async def on_mount(self) -> None:
@@ -27,6 +28,7 @@ class MusicPlayer(App):
         self.directory = DirectoryTree("/home/andrxw/Downloads", "Music") # Actually shows the directory
         
         await self.view.dock(Header(), edge="top")
+        self.title = "Music Player"
         await self.view.dock(Footer(), edge="bottom")
 
         await self.view.dock(ScrollView(self.directory), edge="left", size=48, name="Sidebar") # docks the directory and allows it to scroll
