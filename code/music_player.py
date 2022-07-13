@@ -30,11 +30,14 @@ class DirectorySelector(Widget):
 # TODO: Refactor NowPlaying into its own file as well
 class NowPlaying(Widget):
 
-    def render(self) -> Panel:
-        return Panel(Align.center("Nothing Playing", vertical="middle"))
+    mf = "Nothing Playing"
 
-    def update(self, mf) -> None:
-        return Panel(Align.center(mf, vertical="middle"))
+    def render(self) -> Panel:
+        return Panel(Align.center(self.mf, vertical="middle"), title="Now Playing")
+
+    def update(self, mf):
+       self.mf = mf
+       self.refresh()
 
 class MusicPlayer(App):
 
@@ -75,11 +78,8 @@ class MusicPlayer(App):
         )
 
 
-
         # Creating Widgets
-
-        # TODO: Change body from ScrollView() to custom panel widget
-        self.body = ScrollView(Align.center("Nothing Playing", vertical="middle")) 
+        self.body = NowPlaying()
 
         # TODO: UN-hard code directory
         self.directory = DirectoryTree("/home/andrxw/Downloads", "Music") # shows the directory
@@ -93,6 +93,8 @@ class MusicPlayer(App):
                 area6=Placeholder(),
         )
 
+        self.title="Music Player"
+
     async def handle_file_click(self, message: FileClick) -> None:
         # Message sent by directory tree when clicked
         
@@ -101,7 +103,7 @@ class MusicPlayer(App):
         music_file = message.path # sets music_file to the file clicked
         
         # TODO: Update to show status of the song as well (paused/playing)
-        await self.body.update(Align.center(os.path.basename(music_file), vertical="middle")) # updates body to show currently playing
+        self.body.update(os.path.basename(music_file)) # updates body to show currently playing
         
         player.set_mrl(music_file) # sets the player to the selected music file
         
