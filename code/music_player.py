@@ -1,7 +1,9 @@
+from textual import events
 from textual.app import App
 from textual.widgets import DirectoryTree, Placeholder, ScrollView, FileClick, Header, Footer
 from textual.widget import Widget
 from textual.reactive import Reactive
+from textual.binding import Bindings
 
 from rich.syntax import Syntax
 from rich.console import RenderableType
@@ -13,19 +15,61 @@ import os.path
 import vlc
 
 # TODO: Refactor DirectorySelector into its own file
-#       Implement functionality
 class DirectorySelector(Widget):
 
     mouse_over=Reactive(False)
 
+    md = "Select Music Directory"
+    
+    title = "."
+    
+    select_directory_title = ""
+    
+    has_focus = False
+
+    status = False
+
     def render(self) -> Panel:
-        return Panel(Align.center("Select Music Directory", vertical="middle"), style=("on dark_red" if self.mouse_over else ""), width=48)
+        return Panel(Align.center(self.md, vertical="middle"), style=("red" if self.mouse_over else ""), width=48, title=self.select_directory_title)
 
     def on_enter(self) -> None:
         self.mouse_over = True
 
     def on_leave(self) -> None:
         self.mouse_over = False
+
+    def on_click(self) -> None:
+        self.md = ""
+        self.select_directory_title = "Enter Directory: "
+        self.has_focus = True
+        self.refresh()
+
+    async def on_focus(self):
+        self.has_focus = True
+
+    def get_md(self):
+        return self.title
+
+    def on_key(self, event: events.Key) -> None:
+        if self.has_focus == True:
+            if event.key == "ctrl+h":
+                self.md = self.md[:-1]
+                self.refresh()
+            elif event.key == "escape":
+                self.md = "Select Music Directory"
+                self.select_directory_title = ""
+                self.has_focus = False
+                self.refresh()
+            elif event.key == "enter":
+                self.title = self.md
+                self.md = "Select Music Directory"
+                self.select_directory_title = ""
+                self.has_focus = False
+                self.refresh()  
+            else:
+                self.md += event.key
+                self.refresh()
+
 
 # TODO: Refactor NowPlaying into its own file as well
 class NowPlaying(Widget):
@@ -46,8 +90,8 @@ class MusicPlayer(App):
     player = vlc.MediaPlayer() # media player provided by VLC to control music
 
     async def on_load(self, event):
-        await self.bind("q", "quit", "Quit") # quit keybind
-        await self.bind("p", "pause_play()", "Pause/Play") # pause/play keybind
+        await self.bind("ctrl+c", "quit", "Quit") # quit keybind
+        await self.bind("ctrl+p", "pause_play()", "Pause/Play") # pause/play keybind
     
     # Action handler to pause music
     def action_pause_play(self):
@@ -81,19 +125,27 @@ class MusicPlayer(App):
         # Creating Widgets
         self.body = NowPlaying()
 
-        # TODO: UN-hard code directory
-        self.directory = DirectoryTree("/home/andrxw/Downloads", "Music") # shows the directory
+        self.directory_selector = DirectorySelector()
+        
+        self.music_directory = self.directory_selector.get_md()
+
+        self.directory = ScrollView(DirectoryTree(self.music_directory, "Music")) # shows the directory
         
         grid.place(
                 area1=Header(),
                 area2=Footer(),
-                area3=ScrollView(self.directory),
-                area4=DirectorySelector(), 
+                area3=self.directory,
+                area4=self.directory_selector, 
                 area5=self.body,
                 area6=Placeholder(),
         )
 
         self.title="Music Player"
+
+    async def on_key(self, event) -> None:
+        if event.key == "enter":
+            self.music_directory = self.directory_selector.get_md()
+            await self.directory.update(DirectoryTree(self.music_directory, "Music"))
 
     async def handle_file_click(self, message: FileClick) -> None:
         # Message sent by directory tree when clicked
